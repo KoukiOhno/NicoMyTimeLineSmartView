@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NicoMyTimeLineSmartView
 // @namespace    http://tampermonkey.net/
-// @version      0.5.1
+// @version      0.6
 // @description  ニコレポから不要な通知を非表示化するスクリプト
 // @author       You
 // @match        http://www.nicovideo.jp/my/top
@@ -18,8 +18,8 @@
 (function ($) {
     // ニコレポの表示設定
     $("body").append("<div id='config'></div>");
-    $("#config").append("<div id='configTitle'><label>ニコレポの表示設定</label></div>");
-    $("#config").append("<div><details><summary>ユーザ</summary><ul id='viewUserConfig'></lu></details></div>");
+    $("#config").append("<div id='configTitle'><label>ニコレポの表示設定</label><label id='reapplication'>🔃</label></div>");
+    $("#config").append("<div><details id='userReport'><summary>ユーザ</summary><ul id='viewUserConfig'></lu></details></div>");
     $("#viewUserConfig").append("<li><label><input type='checkbox' class='configCheckbox' id='videoPostReport'>動画投稿</label></li>");
     $("#viewUserConfig").append("<li><label><input type='checkbox' class='configCheckbox' id='illustrationPostReport'>イラスト投稿</label></li>");
     $("#viewUserConfig").append("<li><label><input type='checkbox' class='configCheckbox' id='adReport'>広告</label></li>");
@@ -27,7 +27,8 @@
     $("#viewUserConfig").append("<li><label><input type='checkbox' class='configCheckbox' id='clipReport'>イラストのクリップ</label></li>");
     $("#viewUserConfig").append("<li><label><input type='checkbox' class='configCheckbox' id='mangaReport'>マンガのお気に入り</label></li>");
     $("#viewUserConfig").append("<li><label><input type='checkbox' class='configCheckbox' id='liveReport'>生放送開始</label></li>");
-    $("#config").append("<div><details><summary>チャンネル</summary><ul id='channelConfig'></ul></details></div>");
+    $("#viewUserConfig").append("<li><label><input type='checkbox' class='configCheckbox' id='blomagaReport'>ブロマガの投稿</label></li>");
+    $("#config").append("<div><details id='channelReport'><summary>チャンネル</summary><ul id='channelConfig'></ul></details></div>");
     $("#channelConfig").append("<li><label><input type='checkbox' class='configCheckbox' id='channelArticleReport'>チャンネル記事</label></li>");
     $("#channelConfig").append("<li><label><input type='checkbox' class='configCheckbox' id='channelVideoReport'>チャンネル動画</label></li>");
     $("#channelConfig").append("<li><label><input type='checkbox' class='configCheckbox' id='channelLiveReservationReport'>チャンネル生放送予約</label></li>");
@@ -35,6 +36,12 @@
     $("#config").css({"position":"fixed", "top":"300px", "right":"0px", "width":"150px",
                       "padding":"0.5em 1em", "margin":"2em 0", "background":"#FFF",
                       "border":"solid 3px #6091d3", "font-weight":"bold", "border-radius":"10px"});
+
+    // ユーザ・チャンネルの折り畳みの状態適用
+    var userReportState = strToBool(window.localStorage.getItem("userReportState"));
+    var channelReportState = strToBool(window.localStorage.getItem("channelReportState"));
+    $("#userReport").prop("open",userReportState);
+    $("#channelReport").prop("open",channelReportState);
 
     // 保存済みの表示設定の取得
     // ユーザ
@@ -45,6 +52,7 @@
     var clipReport = window.localStorage.getItem("clipReport");
     var mangaReport = window.localStorage.getItem("mangaReport");
     var liveReport = window.localStorage.getItem("liveReport");
+    var blomagaReport = window.localStorage.getItem("blomagaReport");
 
     // チャンネル
     var channelArticleReport = window.localStorage.getItem("channelArticleReport");
@@ -53,7 +61,7 @@
     var channelLiveReport = window.localStorage.getItem("channelLiveReport");
 
     if(videoPostReport == null || illustrationPostReport == null || adReport == null
-       || mylistReport == null || clipReport == null || liveReport == null
+       || mylistReport == null || clipReport == null || liveReport == null || blomagaReport == null
        || mangaReport == null || channelArticleReport == null || channelVideoReport == null
        || channelLiveReservationReport == null || channelLiveReport == null){
 
@@ -65,6 +73,7 @@
         clipReport = true;
         mangaReport = true;
         liveReport = true;
+        blomagaReport = true;
         channelArticleReport = true;
         channelVideoReport = true;
         channelLiveReservationReport = true;
@@ -78,6 +87,7 @@
         clipReport = strToBool(clipReport);
         mangaReport = strToBool(mangaReport);
         liveReport = strToBool(liveReport);
+        blomagaReport = strToBool(blomagaReport);
         channelArticleReport = strToBool(channelArticleReport);
         channelVideoReport = strToBool(channelVideoReport);
         channelLiveReservationReport = strToBool(channelLiveReservationReport);
@@ -92,6 +102,7 @@
     $("#clipReport").prop("checked",clipReport);
     $("#mangaReport").prop("checked",mangaReport);
     $("#liveReport").prop("checked", liveReport);
+    $("#blomagaReport").prop("checked",blomagaReport);
     $("#channelArticleReport").prop("checked", channelArticleReport);
     $("#channelVideoReport").prop("checked", channelVideoReport);
     $("#channelLiveReservationReport").prop("checked", channelLiveReservationReport);
@@ -107,6 +118,7 @@
         window.localStorage.setItem("clipReport", $("#clipReport").prop("checked"));
         window.localStorage.setItem("mangaReport", $("#mangaReport").prop("checked"));
         window.localStorage.setItem("liveReport", $("#liveReport").prop("checked"));
+        window.localStorage.setItem("blomagaReport",$("#blomagaReport").prop("checked"));
         window.localStorage.setItem("channelArticleReport", $("#channelArticleReport").prop("checked"));
         window.localStorage.setItem("channelVideoReport", $("#channelVideoReport").prop("checked"));
         window.localStorage.setItem("channelLiveReservationReport", $("#channelLiveReservationReport").prop("checked"));
@@ -114,6 +126,24 @@
 
         // ニコレポの表示・非表示処理
         nicorepoViewItems(true);
+    });
+
+    // 設定の再適用
+    $("#reapplication").on("click",function(){
+        // ニコレポの表示・非表示処理
+        nicorepoViewItems(true);
+    });
+
+    // ユーザの折り畳みの情報保持
+    $("#userReport").on("click",function(){
+        var userReportState = $("#userReport").prop("open") == false;
+        window.localStorage.setItem("userReportState",userReportState);
+    });
+
+    // チャンネルの折り畳み情報保持
+    $("#channelReport").on("click",function(){
+        var channelReportState = $("#channelReport").prop("open") == false;
+        window.localStorage.setItem("channelReportState",channelReportState);
     });
 })(jQuery);
 
@@ -135,7 +165,6 @@ window.onload = function(){
 // 監視対象に要素が追加された場合に実行される処理
 function createdTimeLine(){
     var timeLineItems = $('.NicorepoTimelineItem');
-    console.log("初回アクセス");
 
     // 表示・非表示処理の呼び出し
     nicorepoViewItems(false);
@@ -149,7 +178,6 @@ function createdTimeLine(){
 
     // 【さらに読み込む】で要素が監視対象に追加された場合に実行される処理
     function addTimeLineItem(){
-        console.log("追加アクセス");
         nicorepoViewItems(false);
     }
 }
@@ -163,6 +191,7 @@ function nicorepoViewItems(isChanged){
     var clipReport = $("#clipReport").prop("checked");
     var mangaReport = $("#mangaReport").prop("checked");
     var liveReport = $("#liveReport").prop("checked");
+    var blomagaReport = $("#blomagaReport").prop("checked");
     var channelArticleReport = $("#channelArticleReport").prop("checked");
     var channelVideoReport = $("#channelVideoReport").prop("checked");
     var channelLiveReservationReport = $("#channelLiveReservationReport").prop("checked");
@@ -206,6 +235,10 @@ function nicorepoViewItems(isChanged){
         }else if(text.match(/生放送.*を開始しました。/)){
             // コミュニティ生放送の開始
             viewItem(liveReport, $(this));
+
+        }else if(text.match(/記事を投稿しました。/)){
+            // ブロマガの投稿
+            viewItem(blomagaReport,$(this));
 
         }else if(text.match(/チャンネル.*に記事が追加されました。/)){
             // チャンネル記事
