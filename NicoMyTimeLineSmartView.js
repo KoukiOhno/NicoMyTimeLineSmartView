@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NicoMyTimeLineSmartView
 // @namespace    http://tampermonkey.net/
-// @version      0.6
+// @version      0.7.2
 // @description  ニコレポから不要な通知を非表示化するスクリプト
 // @author       You
 // @match        http://www.nicovideo.jp/my/top
@@ -12,10 +12,138 @@
 // @match        http://www.nicovideo.jp/my/top/com
 // @match        http://www.nicovideo.jp/my/top/mylist
 // @grant        none
-// @require      https://code.jquery.com/jquery-3.3.1.slim.js
+// @require      https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js
 // ==/UserScript==
 
 (function ($) {
+    //===================================
+    // タイムラインの要素監視と縮小化
+    //===================================
+    $(window).on("load",function(){
+        // 監視対象を定義
+        var targetTimelines =  document.getElementsByClassName('nicorepo-page')[0];
+        var timelineMO = new MutationObserver(createTimeLine);
+
+        function createTimeLine(){
+            // ニコレポの縮小処理
+            nicorepoViewItems(false);
+
+            var targetTimeline =  document.getElementsByClassName('NicorepoTimeline')[0];
+            var itemMO = new MutationObserver(addTimeLineItem);
+
+            // 【さらに読み込む】で要素が監視対象に追加された場合に実行される処理
+            function addTimeLineItem(){
+                nicorepoViewItems(false);
+            }
+
+            // NicorepoTimelineへの要素の追加の監視を開始
+            itemMO.observe(targetTimeline, {childList:true});
+        }
+
+        // NicorepoTimelineへの要素の追加の監視を開始
+        timelineMO.observe(targetTimelines, {childList:true});
+    });
+
+    function nicorepoViewItems(isChanged){
+        // 表示設定を取得
+        var videoPostReport = $("#videoPostReport").prop("checked");
+        var illustrationPostReport = $("#illustrationPostReport").prop("checked");
+        var adReport = $("#adReport").prop("checked");
+        var mylistReport = $("#mylistReport").prop("checked");
+        var clipReport = $("#clipReport").prop("checked");
+        var mangaReport = $("#mangaReport").prop("checked");
+        var liveReport = $("#liveReport").prop("checked");
+        var blomagaReport = $("#blomagaReport").prop("checked");
+        var channelArticleReport = $("#channelArticleReport").prop("checked");
+        var channelVideoReport = $("#channelVideoReport").prop("checked");
+        var channelLiveReservationReport = $("#channelLiveReservationReport").prop("checked");
+        var channelLiveReport = $("#channelLiveReport").prop("checked");
+
+        // ニコレポの要素を取得
+        var timeLine = $(".NicorepoTimeline");
+        var timeLineItems = $('.NicorepoTimelineItem');
+
+        // 表示・非表示処理
+        $.each(timeLineItems,function(index,val){
+            // ニコレポのlog-body要素を取得
+            var checkElement = $(this).find(".log-body");
+            // ニコレポのlog-bodyの内容を取得
+            var text = checkElement.text();
+
+            if(text.match(/動画を投稿しました。/)){
+                // 動画投稿
+                viewItem(videoPostReport, $(this));
+
+            }else if(text.match(/イラストを投稿しました。/)){
+                // イラスト投稿
+                viewItem(illustrationPostReport, $(this));
+
+            }else if(text.match(/ニコニ広告しました。/)){
+                // ニコニコ広告
+                viewItem(adReport, $(this));
+
+            }else if(text.match(/動画を登録しました。/)){
+                // 動画のマイリスト登録
+                viewItem(mylistReport, $(this));
+
+            }else if(text.match(/イラストをクリップしました。/)){
+                // イラストのクリップ登録
+                viewItem(clipReport, $(this));
+
+            }else if(text.match(/マンガをお気に入りしました。/)){
+                // マンガのお気に入り追加
+                viewItem(mangaReport,$(this));
+
+            }else if(text.match(/生放送.*を開始しました。/)){
+                // コミュニティ生放送の開始
+                viewItem(liveReport, $(this));
+
+            }else if(text.match(/記事を投稿しました。/)){
+                // ブロマガの投稿
+                viewItem(blomagaReport,$(this));
+
+            }else if(text.match(/チャンネル.*に記事が追加されました。/)){
+                // チャンネル記事
+                viewItem(channelArticleReport,$(this));
+
+            }else if(text.match(/チャンネル.*動画が追加されました。/)){
+                // チャンネル動画
+                viewItem(channelVideoReport,$(this));
+
+            }else if(text.match(/チャンネル.*で.*に生放送が予約されました。/)){
+                // チャンネル生放送の予約
+                viewItem(channelLiveReservationReport,$(this));
+
+            }else if(text.match(/チャンネル.*で生放送が開始されました。/)){
+                // チャンネル生放送の開始
+                viewItem(channelLiveReport,$(this));
+
+            }else{
+                // その他（非表示）
+                viewItem(false, $(this));
+            }
+        });
+    };
+
+    // 表示・非表示処理
+    function viewItem(viewFlag,element){
+        if(viewFlag){
+            // 表示処理
+            element.css("display","");
+        }else{
+            // 非表示処理
+            element.css("display","none");
+        }
+    }
+
+    // string型をBoolean型に変換する関数
+    function strToBool(boolStr){
+        if(boolStr == null || boolStr == "undefined"){
+            return false;
+        }
+        return boolStr.toLowerCase() === "true";
+    }
+
     // ニコレポの表示設定
     $("body").append("<div id='config'></div>");
     $("#config").append("<div id='configTitle'><label>ニコレポの表示設定</label><label id='reapplication'>🔃</label></div>");
@@ -146,149 +274,3 @@
         window.localStorage.setItem("channelReportState",channelReportState);
     });
 })(jQuery);
-
-//===================================
-// タイムラインの要素監視と縮小化
-//===================================
-var itemCount = 0;
-var beforeItemCount = 0;
-
-window.onload = function(){
-    // 監視対象を定義
-    var targets = document.getElementsByClassName("nicorepo-page");
-    var target = targets[0];
-    var timeLineMO = new MutationObserver(createdTimeLine);
-    // nicorepo-pageへの要素の追加の監視を開始
-    timeLineMO.observe(target, {childList: true});
-};
-
-// 監視対象に要素が追加された場合に実行される処理
-function createdTimeLine(){
-    var timeLineItems = $('.NicorepoTimelineItem');
-
-    // 表示・非表示処理の呼び出し
-    nicorepoViewItems(false);
-
-    // 監視対象を定義
-    var targetTimelines =  $('.NicorepoTimeline');
-    var targetTimeline = targetTimelines[0];
-    var itemMO = new MutationObserver(addTimeLineItem);
-    // NicorepoTimelineへの要素の追加の監視を開始
-    itemMO.observe(targetTimeline, {childList: true});
-
-    // 【さらに読み込む】で要素が監視対象に追加された場合に実行される処理
-    function addTimeLineItem(){
-        nicorepoViewItems(false);
-    }
-}
-
-function nicorepoViewItems(isChanged){
-    // 表示設定を取得
-    var videoPostReport = $("#videoPostReport").prop("checked");
-    var illustrationPostReport = $("#illustrationPostReport").prop("checked");
-    var adReport = $("#adReport").prop("checked");
-    var mylistReport = $("#mylistReport").prop("checked");
-    var clipReport = $("#clipReport").prop("checked");
-    var mangaReport = $("#mangaReport").prop("checked");
-    var liveReport = $("#liveReport").prop("checked");
-    var blomagaReport = $("#blomagaReport").prop("checked");
-    var channelArticleReport = $("#channelArticleReport").prop("checked");
-    var channelVideoReport = $("#channelVideoReport").prop("checked");
-    var channelLiveReservationReport = $("#channelLiveReservationReport").prop("checked");
-    var channelLiveReport = $("#channelLiveReport").prop("checked");
-
-    // ニコレポの要素を取得
-    var timeLine = $(".NicorepoTimeline");
-    var timeLineItems = $('.NicorepoTimelineItem');
-
-    // 表示・非表示処理
-    $.each(timeLineItems,function(index,val){
-        // ニコレポのlog-body要素を取得
-        var checkElement = $(this).find(".log-body");
-        // ニコレポのlog-bodyの内容を取得
-        var text = checkElement.text();
-
-        if(text.match(/動画を投稿しました。/)){
-            // 動画投稿
-            viewItem(videoPostReport, $(this));
-
-        }else if(text.match(/イラストを投稿しました。/)){
-            // イラスト投稿
-            viewItem(illustrationPostReport, $(this));
-
-        }else if(text.match(/ニコニ広告しました。/)){
-            // ニコニコ広告
-            viewItem(adReport, $(this));
-
-        }else if(text.match(/動画を登録しました。/)){
-            // 動画のマイリスト登録
-            viewItem(mylistReport, $(this));
-
-        }else if(text.match(/イラストをクリップしました。/)){
-            // イラストのクリップ登録
-            viewItem(clipReport, $(this));
-
-        }else if(text.match(/マンガをお気に入りしました。/)){
-            // マンガのお気に入り追加
-            viewItem(mangaReport,$(this));
-
-        }else if(text.match(/生放送.*を開始しました。/)){
-            // コミュニティ生放送の開始
-            viewItem(liveReport, $(this));
-
-        }else if(text.match(/記事を投稿しました。/)){
-            // ブロマガの投稿
-            viewItem(blomagaReport,$(this));
-
-        }else if(text.match(/チャンネル.*に記事が追加されました。/)){
-            // チャンネル記事
-            viewItem(channelArticleReport,$(this));
-
-        }else if(text.match(/チャンネル.*動画が追加されました。/)){
-            // チャンネル動画
-            viewItem(channelVideoReport,$(this));
-
-        }else if(text.match(/チャンネル.*で.*に生放送が予約されました。/)){
-            // チャンネル生放送の予約
-            viewItem(channelLiveReservationReport,$(this));
-
-        }else if(text.match(/チャンネル.*で生放送が開始されました。/)){
-            // チャンネル生放送の開始
-            viewItem(channelLiveReport,$(this));
-
-        }else{
-            // その他（非表示）
-            viewItem(false, $(this));
-        }
-    });
-
-    // 現在の表示件数を記憶（表示件数0に対応する）
-    itemCount = timeLine.find(".NicorepoTimelineItem:not(:hidden)").length;
-
-    // 表示件数が前回と同じ件数の場合、
-    // 次の情報を取得するためリンクをクリックさせる。
-    if( isChanged == false && itemCount == beforeItemCount){
-       $(".timeline-next-link")[0].click();
-    }
-    beforeItemCount = itemCount;
-};
-
-// 表示・非表示処理
-function viewItem(viewFlag,element){
-    if(viewFlag){
-        // 表示処理
-        element.css("display","");
-    }else{
-        // 非表示処理
-        element.css("display","none");
-    }
-}
-
-// string型をBoolean型に変換する関数
-function strToBool(boolStr){
-    if(boolStr == null || boolStr == "undefined"){
-        return false;
-    }
-    return boolStr.toLowerCase() === "true";
-}
-
