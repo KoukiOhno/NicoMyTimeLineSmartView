@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NicoMyTimeLineSmartView
 // @namespace    http://tampermonkey.net/
-// @version      0.7.2
+// @version      0.7.3
 // @description  ニコレポから不要な通知を非表示化するスクリプト
 // @author       You
 // @match        http://www.nicovideo.jp/my/top
@@ -54,6 +54,8 @@
         var mangaReport = $("#mangaReport").prop("checked");
         var liveReport = $("#liveReport").prop("checked");
         var blomagaReport = $("#blomagaReport").prop("checked");
+        var rankingReport = $("#rankingReport").prop("checked");
+        var playcountReport = $("#playcountReport").prop("checked");
         var channelArticleReport = $("#channelArticleReport").prop("checked");
         var channelVideoReport = $("#channelVideoReport").prop("checked");
         var channelLiveReservationReport = $("#channelLiveReservationReport").prop("checked");
@@ -101,6 +103,12 @@
             }else if(text.match(/記事を投稿しました。/)){
                 // ブロマガの投稿
                 viewItem(blomagaReport,$(this));
+
+            }else if(text.match(/ランキングで/)){
+                viewItem(rankingReport,$(this));
+
+            }else if(text.match(/再生を達成しました。/)){
+                viewItem(playcountReport,$(this))
 
             }else if(text.match(/チャンネル.*に記事が追加されました。/)){
                 // チャンネル記事
@@ -156,6 +164,8 @@
     $("#viewUserConfig").append("<li><label><input type='checkbox' class='configCheckbox' id='mangaReport'>マンガのお気に入り</label></li>");
     $("#viewUserConfig").append("<li><label><input type='checkbox' class='configCheckbox' id='liveReport'>生放送開始</label></li>");
     $("#viewUserConfig").append("<li><label><input type='checkbox' class='configCheckbox' id='blomagaReport'>ブロマガの投稿</label></li>");
+    $("#viewUserConfig").append("<li><label><input type='checkbox' class='configCheckbox' id='rankingReport'>ランキング</label></li>");
+    $("#viewUserConfig").append("<li><label><input type='checkbox' class='configCheckbox' id='playcountReport'>再生数</label></li>");
     $("#config").append("<div><details id='channelReport'><summary>チャンネル</summary><ul id='channelConfig'></ul></details></div>");
     $("#channelConfig").append("<li><label><input type='checkbox' class='configCheckbox' id='channelArticleReport'>チャンネル記事</label></li>");
     $("#channelConfig").append("<li><label><input type='checkbox' class='configCheckbox' id='channelVideoReport'>チャンネル動画</label></li>");
@@ -181,6 +191,8 @@
     var mangaReport = window.localStorage.getItem("mangaReport");
     var liveReport = window.localStorage.getItem("liveReport");
     var blomagaReport = window.localStorage.getItem("blomagaReport");
+    var rankingReport = window.localStorage.getItem("rankingReport");
+    var playcountReport = window.localStorage.getItem("playcountReport");
 
     // チャンネル
     var channelArticleReport = window.localStorage.getItem("channelArticleReport");
@@ -190,7 +202,8 @@
 
     if(videoPostReport == null || illustrationPostReport == null || adReport == null
        || mylistReport == null || clipReport == null || liveReport == null || blomagaReport == null
-       || mangaReport == null || channelArticleReport == null || channelVideoReport == null
+       || mangaReport == null || rankingReport == null || playcountReport == null
+       || channelArticleReport == null || channelVideoReport == null
        || channelLiveReservationReport == null || channelLiveReport == null){
 
         // 保存された要素がどれか1つでもnullの場合、Trueを設定
@@ -202,6 +215,8 @@
         mangaReport = true;
         liveReport = true;
         blomagaReport = true;
+        rankingReport = true;
+        playcountReport = true;
         channelArticleReport = true;
         channelVideoReport = true;
         channelLiveReservationReport = true;
@@ -216,6 +231,8 @@
         mangaReport = strToBool(mangaReport);
         liveReport = strToBool(liveReport);
         blomagaReport = strToBool(blomagaReport);
+        rankingReport = strToBool(rankingReport);
+        playcountReport = strToBool(playcountReport);
         channelArticleReport = strToBool(channelArticleReport);
         channelVideoReport = strToBool(channelVideoReport);
         channelLiveReservationReport = strToBool(channelLiveReservationReport);
@@ -231,6 +248,8 @@
     $("#mangaReport").prop("checked",mangaReport);
     $("#liveReport").prop("checked", liveReport);
     $("#blomagaReport").prop("checked",blomagaReport);
+    $("#rankingReport").prop("checked",rankingReport);
+    $("#playcountReport").prop("checked",playcountReport);
     $("#channelArticleReport").prop("checked", channelArticleReport);
     $("#channelVideoReport").prop("checked", channelVideoReport);
     $("#channelLiveReservationReport").prop("checked", channelLiveReservationReport);
@@ -247,6 +266,8 @@
         window.localStorage.setItem("mangaReport", $("#mangaReport").prop("checked"));
         window.localStorage.setItem("liveReport", $("#liveReport").prop("checked"));
         window.localStorage.setItem("blomagaReport",$("#blomagaReport").prop("checked"));
+        window.localStorage.setItem("rankingReport",$("#rankingReport").prop("checked"));
+        window.localStorage.setItem("playcountReport",$("#playcountReport").prop("checked"));
         window.localStorage.setItem("channelArticleReport", $("#channelArticleReport").prop("checked"));
         window.localStorage.setItem("channelVideoReport", $("#channelVideoReport").prop("checked"));
         window.localStorage.setItem("channelLiveReservationReport", $("#channelLiveReservationReport").prop("checked"));
